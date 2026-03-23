@@ -22,7 +22,8 @@
     .form-control[readonly] { background-color: #e9ecef; color: #6c757d; }
     .btn-submit { background-color: #198754; color: white; border: none; font-size: 22px; border-radius: 12px; padding: 15px; font-weight: 700; width: 100%; transition: all 0.2s; margin-top: 10px; }
     .stock-badge { background-color: #e8f5e9; color: #2e7d32; padding: 5px 10px; border-radius: 8px; font-size: 16px; font-weight: 600; margin-top: 5px; display: inline-block; }
-    #slip-box { position: absolute; left: -9999px; top: 0; width: 400px; padding: 30px; background-color: white; border-radius: 15px; border: 2px solid #198754; text-align: center; color: #333; }
+    
+    #slip-box { position: absolute; left: -9999px; top: 0; width: 400px; padding: 30px; background-color: white; border-radius: 15px; border: 2px solid #198754; text-align: center; font-family: 'Sarabun', sans-serif; color: #333; }
     .slip-logo { color: #198754; font-size: 40px; margin-bottom: 10px; }
     .slip-med-name { font-size: 24px; font-weight: bold; color: #000; background: #e8f5e9; padding: 10px; border-radius: 8px; margin: 15px 0; }
     .slip-usage { font-size: 22px; color: #d32f2f; font-weight: 600; border: 2px dashed #d32f2f; padding: 15px; border-radius: 8px; margin-bottom: 15px; background: #ffebee; }
@@ -61,14 +62,13 @@
   </div>
 
   <script>
-    // 💥💥 ใส่ URL ของ Google Apps Script ที่ Deploy เสร็จแล้วตรงนี้ 💥💥
-    const API_URL = "https://script.google.com/macros/s/AKfycbzZNHJwtLj5adY_e-dpgBD_jqNoED_JF-uVx0mZvJVxDK-NR0cyscxROnOWD6h8VeLh/exec"; 
+    // 💥💥 เปลี่ยนลิงก์ข้างล่างนี้เป็น URL ของ Web App คุณ (ที่ลงท้ายด้วย /exec) 💥💥
+    const API_URL = "https://script.google.com/macros/s/AKfycbydRbm6Uu_7DkdkUWxfLqwvslkG2eD4vmvD4VKwfrJz_BPmhFDFKDmiczC2m9CsvU2W/exec"; 
     
     let currentStockData = [];
     let deptName = "";
 
     window.onload = function() {
-      // ดึงชื่อหน่วยงานจาก URL Parameter (เช่น ?dept=โรงไฟฟ้า)
       const urlParams = new URLSearchParams(window.location.search);
       deptName = urlParams.get('dept');
       
@@ -88,7 +88,6 @@
       
       Swal.fire({ title: '<span style="font-family: Sarabun;">กำลังโหลดสต๊อก...</span>', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
       
-      // ส่ง GET request ไปยัง Google Apps Script API
       fetch(`${API_URL}?action=getDispenseData&dept=${deptName}`)
         .then(response => response.json())
         .then(res => {
@@ -103,6 +102,7 @@
             document.getElementById('btnSubmit').disabled = true;
           } else {
             medSelect.innerHTML = '<option value="">-- เลือกรายการยา --</option>';
+            // เอา value เป็นแค่ชื่อยาเท่านั้น
             currentStockData.forEach(m => { medSelect.innerHTML += `<option value="${m.name}">${m.name} (เหลือ ${m.stock})</option>`; });
           }
           Swal.close();
@@ -110,10 +110,11 @@
     }
 
     function updateMaxAmount() {
-      const selectedMedName = document.getElementById('d-medicine').value;
+      const selectedMedName = document.getElementById('d-medicine').value; // ตรงนี้จะได้ชื่อยาเป๊ะๆ
       const amountInput = document.getElementById('d-amount');
       const stockDisplay = document.getElementById('stock-display');
       if(!selectedMedName) { amountInput.max = ""; amountInput.value = ""; stockDisplay.style.display = "none"; return; }
+      
       const medInfo = currentStockData.find(m => m.name === selectedMedName);
       if(medInfo) {
         amountInput.max = medInfo.stock; amountInput.value = 1; 
@@ -136,7 +137,6 @@
 
       Swal.fire({ title: '<span style="font-family: Sarabun;">กำลังบันทึก...</span>', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-      // ส่ง POST request ไปยัง Google Apps Script API (ใช้แบบ text/plain เพื่อกัน CORS Error)
       fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -147,7 +147,7 @@
         document.getElementById('slip-date').innerText = dDate;
         document.getElementById('slip-name').innerText = dispenser;
         document.getElementById('slip-med').innerText = selectedMedName + " (จำนวน " + dataObj.amount + ")";
-        document.getElementById('slip-usage').innerText = (medInfo && medInfo.usage && medInfo.usage !== "") ? medInfo.usage : "โปรดสอบถามวิธีใช้";
+        document.getElementById('slip-usage').innerText = (medInfo && medInfo.usage && medInfo.usage !== "") ? medInfo.usage : "โปรดสอบถามวิธีใช้จากผู้เชี่ยวชาญ";
 
         html2canvas(document.getElementById('slip-box'), {scale: 2}).then(canvas => {
           let imgData = canvas.toDataURL("image/jpeg", 0.95);
