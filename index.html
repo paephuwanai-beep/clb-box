@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>เบิกใช้ยาและเวชภัณฑ์</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    body { font-family: 'Sarabun', sans-serif; background-color: #f0f2f5; font-size: 18px; margin: 0; padding: 0; overflow-x: hidden; }
+    .mobile-wrapper { max-width: 450px; margin: 0 auto; background: #fff; min-height: 100vh; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
+    .header-bg { background: linear-gradient(135deg, #198754, #146c43); color: white; padding: 30px 20px 25px; border-radius: 0 0 25px 25px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(25, 135, 84, 0.2); }
+    .header-bg h3 { font-weight: 700; margin-bottom: 5px; font-size: 26px; }
+    .header-bg p { opacity: 0.9; font-size: 18px; margin-bottom: 0; }
+    .card-inner { padding: 0 25px 30px 25px; }
+    .form-label { font-weight: 600; color: #495057; font-size: 18px; margin-bottom: 8px; }
+    .form-control, .form-select { border-radius: 12px; border: 1px solid #ced4da; padding: 12px 15px; font-size: 18px; background-color: #f8f9fa; }
+    .form-control:focus, .form-select:focus { border-color: #198754; background-color: #fff; box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25); }
+    .form-control[readonly] { background-color: #e9ecef; color: #6c757d; }
+    .btn-submit { background-color: #198754; color: white; border: none; font-size: 22px; border-radius: 12px; padding: 15px; font-weight: 700; width: 100%; transition: all 0.2s; margin-top: 10px; }
+    .stock-badge { background-color: #e8f5e9; color: #2e7d32; padding: 5px 10px; border-radius: 8px; font-size: 16px; font-weight: 600; margin-top: 5px; display: inline-block; }
+    #slip-box { position: absolute; left: -9999px; top: 0; width: 400px; padding: 30px; background-color: white; border-radius: 15px; border: 2px solid #198754; text-align: center; color: #333; }
+    .slip-logo { color: #198754; font-size: 40px; margin-bottom: 10px; }
+    .slip-med-name { font-size: 24px; font-weight: bold; color: #000; background: #e8f5e9; padding: 10px; border-radius: 8px; margin: 15px 0; }
+    .slip-usage { font-size: 22px; color: #d32f2f; font-weight: 600; border: 2px dashed #d32f2f; padding: 15px; border-radius: 8px; margin-bottom: 15px; background: #ffebee; }
+  </style>
+</head>
+<body>
+
+  <div class="mobile-wrapper">
+    <div class="header-bg">
+      <h3><i class="bi bi-prescription2"></i> เบิกใช้ยาและเวชภัณฑ์</h3>
+      <p id="display-dept">โหลดข้อมูล...</p>
+    </div>
+    
+    <div class="card-inner">
+      <form id="dispenseForm" onsubmit="event.preventDefault(); submitDispense();">
+        <div class="row g-3 mb-4">
+          <div class="col-6"><label class="form-label">วันที่</label><input type="date" class="form-control" id="d-date" required readonly></div>
+          <div class="col-6"><label class="form-label">เวลา</label><input type="time" class="form-control" id="d-time" required readonly></div>
+        </div>
+        <div class="mb-4"><label class="form-label">อาการเบื้องต้น</label><select class="form-select" id="d-symptom" required><option value="">-- รอข้อมูล... --</option></select></div>
+        <div class="mb-4"><label class="form-label">รายการยา</label><select class="form-select" id="d-medicine" required onchange="updateMaxAmount()"><option value="">-- รอข้อมูล... --</option></select></div>
+        <div class="mb-4"><label class="form-label">จำนวน</label><input type="number" class="form-control text-center fs-4" id="d-amount" min="1" required placeholder="0"><div id="stock-display" class="stock-badge" style="display: none;"></div></div>
+        <div class="mb-4"><label class="form-label">ลงชื่อผู้เบิก</label><input type="text" class="form-control" id="d-dispenser-name" required placeholder="ระบุชื่อ"></div>
+        <button type="submit" class="btn-submit shadow-sm" id="btnSubmit"><i class="bi bi-check-circle-fill me-2"></i> บันทึกการเบิกยา</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="slip-box">
+    <div class="slip-logo"><i class="bi bi-heart-pulse-fill"></i></div>
+    <h3 style="margin-bottom: 5px;">ใบแนะนำการใช้ยา</h3>
+    <p style="color: #666; font-size: 18px; margin-bottom: 20px;">สถานพยาบาลเขื่อนจุฬาภรณ์</p>
+    <div style="text-align: left; font-size: 18px; margin-bottom: 10px;"><b>วันที่:</b> <span id="slip-date"></span><br><b>ชื่อผู้เบิก:</b> <span id="slip-name"></span></div>
+    <div class="slip-med-name" id="slip-med"></div><h4 style="margin-bottom: 10px;">วิธีใช้ (คำแนะนำ)</h4><div class="slip-usage" id="slip-usage"></div>
+    <p style="font-size: 16px; color: #888; margin-top: 20px;">*กรุณาใช้ยาตามคำแนะนำอย่างเคร่งครัด</p>
+  </div>
+
+  <script>
+    // 💥💥 ใส่ URL ของ Google Apps Script ที่ Deploy เสร็จแล้วตรงนี้ 💥💥
+    const API_URL = "https://script.google.com/macros/s/AKfycbxjxAGQG9649Oj2JkMETbSvbiROmqXWZnv7KShhxjoA7Nn9I7_WBLFmYg_7GJ_PJyLXFg/exechttps://script.google.com/macros/s/xxxxxxxxxxxxx/exec"; 
+    
+    let currentStockData = [];
+    let deptName = "";
+
+    window.onload = function() {
+      // ดึงชื่อหน่วยงานจาก URL Parameter (เช่น ?dept=โรงไฟฟ้า)
+      const urlParams = new URLSearchParams(window.location.search);
+      deptName = urlParams.get('dept');
+      
+      if(!deptName) {
+        document.getElementById('display-dept').innerText = "ข้อผิดพลาด: ลิงก์ไม่สมบูรณ์";
+        Swal.fire('ข้อผิดพลาด', 'กรุณาระบุหน่วยงานใน URL เช่น ?dept=ชื่อหน่วยงาน', 'error');
+        return;
+      }
+      document.getElementById('display-dept').innerText = deptName;
+      loadFormData(); 
+    };
+
+    function loadFormData() {
+      const now = new Date();
+      document.getElementById('d-date').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      document.getElementById('d-time').value = now.toTimeString().substring(0, 5);
+      
+      Swal.fire({ title: '<span style="font-family: Sarabun;">กำลังโหลดสต๊อก...</span>', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      
+      // ส่ง GET request ไปยัง Google Apps Script API
+      fetch(`${API_URL}?action=getDispenseData&dept=${deptName}`)
+        .then(response => response.json())
+        .then(res => {
+          const symSelect = document.getElementById('d-symptom');
+          symSelect.innerHTML = '<option value="">-- เลือกอาการ --</option>';
+          res.symptoms.forEach(s => symSelect.innerHTML += `<option value="${s}">${s}</option>`);
+
+          currentStockData = res.availableMeds;
+          const medSelect = document.getElementById('d-medicine');
+          if(currentStockData.length === 0) {
+            medSelect.innerHTML = '<option value="">-- ยาหมดสต๊อก --</option>';
+            document.getElementById('btnSubmit').disabled = true;
+          } else {
+            medSelect.innerHTML = '<option value="">-- เลือกรายการยา --</option>';
+            currentStockData.forEach(m => { medSelect.innerHTML += `<option value="${m.name}">${m.name} (เหลือ ${m.stock})</option>`; });
+          }
+          Swal.close();
+        }).catch(err => { Swal.fire('Error', 'เชื่อมต่อระบบล้มเหลว', 'error'); });
+    }
+
+    function updateMaxAmount() {
+      const selectedMedName = document.getElementById('d-medicine').value;
+      const amountInput = document.getElementById('d-amount');
+      const stockDisplay = document.getElementById('stock-display');
+      if(!selectedMedName) { amountInput.max = ""; amountInput.value = ""; stockDisplay.style.display = "none"; return; }
+      const medInfo = currentStockData.find(m => m.name === selectedMedName);
+      if(medInfo) {
+        amountInput.max = medInfo.stock; amountInput.value = 1; 
+        stockDisplay.innerHTML = `<i class="bi bi-info-circle"></i> เบิกได้สูงสุด ${medInfo.stock} ชิ้น`; stockDisplay.style.display = "inline-block";
+      }
+    }
+
+    function submitDispense() {
+      document.getElementById('btnSubmit').disabled = true;
+      const selectedMedName = document.getElementById('d-medicine').value; 
+      const medInfo = currentStockData.find(m => m.name === selectedMedName);
+      const dispenser = document.getElementById('d-dispenser-name').value;
+      const dDate = document.getElementById('d-date').value;
+      
+      const dataObj = {
+        date: dDate, time: document.getElementById('d-time').value, department: deptName,
+        symptom: document.getElementById('d-symptom').value, medicine: selectedMedName,
+        amount: document.getElementById('d-amount').value, dispenserName: dispenser
+      };
+
+      Swal.fire({ title: '<span style="font-family: Sarabun;">กำลังบันทึก...</span>', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+      // ส่ง POST request ไปยัง Google Apps Script API (ใช้แบบ text/plain เพื่อกัน CORS Error)
+      fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: "saveDispenseRecord", data: dataObj })
+      })
+      .then(response => response.json())
+      .then(res => {
+        document.getElementById('slip-date').innerText = dDate;
+        document.getElementById('slip-name').innerText = dispenser;
+        document.getElementById('slip-med').innerText = selectedMedName + " (จำนวน " + dataObj.amount + ")";
+        document.getElementById('slip-usage').innerText = (medInfo && medInfo.usage && medInfo.usage !== "") ? medInfo.usage : "โปรดสอบถามวิธีใช้";
+
+        html2canvas(document.getElementById('slip-box'), {scale: 2}).then(canvas => {
+          let imgData = canvas.toDataURL("image/jpeg", 0.95);
+          Swal.fire({
+            title: '<span style="font-family: Sarabun; color:#198754;">บันทึกสำเร็จ!</span>',
+            html: '<span style="font-family: Sarabun;">นี่คือคำแนะนำการใช้ยาของคุณ</span>',
+            imageUrl: imgData, imageWidth: '100%', showCancelButton: true,
+            confirmButtonColor: '#198754', cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="bi bi-download"></i> บันทึกเป็นรูปภาพ', cancelButtonText: 'ปิด และเบิกยาต่อ', allowOutsideClick: false
+          }).then((result) => {
+            if (result.isConfirmed) {
+              let link = document.createElement('a');
+              link.download = `คำแนะนำ_${selectedMedName}.jpg`; link.href = imgData; link.click();
+            }
+            document.getElementById('dispenseForm').reset();
+            document.getElementById('stock-display').style.display = "none";
+            document.getElementById('btnSubmit').disabled = false;
+            document.getElementById('d-dispenser-name').value = dispenser; 
+            loadFormData(); 
+          });
+        });
+      }).catch(err => { Swal.fire('Error', 'บันทึกข้อมูลล้มเหลว', 'error'); document.getElementById('btnSubmit').disabled = false; });
+    }
+  </script>
+</body>
+</html>
